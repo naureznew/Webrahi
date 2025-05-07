@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Medicine Manager</title>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    .navbar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .navbar button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      color: white;
+    }
+    .btn1 { background-color: #3498db; }
+    .btn2 { background-color: #2ecc71; }
+    .btn3 { background-color: #e67e22; }
+    .btn4 { background-color: #9b59b6; }
+    .section { display: none; }
+    input {
+      display: block;
+      margin: 10px 0;
+      padding: 8px;
+      width: 100%;
+      max-width: 300px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 900px;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: left;
+    }
+    th { background-color: #eee; }
+    .remove-btn {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .highlight {
+      background-color: #a5f7a5;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="navbar">
+    <button class="btn1" onclick="showSection('addData')">Add Data</button>
+    <button class="btn2" onclick="showSection('productList')">Product List</button>
+    <button class="btn3" onclick="showSection('expiryList')">Expiry List</button>
+    <button class="btn4" onclick="showSection('productFind')">Product Find</button>
+  </div>
+
+  <!-- Add Data Section -->
+  <div id="addData" class="section">
+    <h2>Add Product Data</h2>
+    <input type="text" id="productName" placeholder="Product Name">
+    <input type="date" id="mfgDate" placeholder="Enter MFG Date">
+    <input type="date" id="expiryDate" placeholder="Enter Expiry Date">
+    <input type="text" id="productLocation" placeholder="Location">
+    <button onclick="addProduct()">Add</button>
+  </div>
+
+  <!-- Product List Section -->
+  <div id="productList" class="section">
+    <h2>Product List</h2>
+    <table id="productTable">
+      <thead>
+        <tr>
+          <th>Product Name</th>
+          <th>MFG Date</th>
+          <th>Expiry Date</th>
+          <th>Location</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Expiry List Section -->
+  <div id="expiryList" class="section">
+    <h2>Products Expiring in 3 Months</h2>
+    <table id="expiryTable">
+      <thead>
+        <tr>
+          <th>Product Name</th>
+          <th>MFG Date</th>
+          <th>Expiry Date</th>
+          <th>Location</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Product Find Section -->
+  <div id="productFind" class="section">
+    <h2>Find Product</h2>
+    <input type="text" id="searchInput" placeholder="Search product by name..." oninput="filterProducts()">
+    <table id="findTable">
+      <thead>
+        <tr>
+          <th>Product Name</th>
+          <th>MFG Date</th>
+          <th>Expiry Date</th>
+          <th>Location</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    function showSection(id) {
+      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
+      if (id === 'productList') loadProducts();
+      if (id === 'expiryList') loadExpiringProducts();
+      if (id === 'productFind') loadAllProducts();
+    }
+
+    function addProduct() {
+      const name = document.getElementById('productName').value;
+      const mfg = document.getElementById('mfgDate').value;
+      const expiry = document.getElementById('expiryDate').value;
+      const location = document.getElementById('productLocation').value;
+
+      if (!name || !mfg || !expiry || !location) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      const product = { name, mfg, expiry, location };
+      let products = JSON.parse(localStorage.getItem('products') || '[]');
+      products.push(product);
+      localStorage.setItem('products', JSON.stringify(products));
+      alert("Product added successfully!");
+      document.getElementById('productName').value = '';
+      document.getElementById('mfgDate').value = '';
+      document.getElementById('expiryDate').value = '';
+      document.getElementById('productLocation').value = '';
+    }
+
+    function loadProducts() {
+      const tableBody = document.querySelector('#productTable tbody');
+      tableBody.innerHTML = '';
+      const products = JSON.parse(localStorage.getItem('products') || '[]');
+
+      products.forEach((p, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${p.name}</td>
+          <td>${p.mfg}</td>
+          <td>${p.expiry}</td>
+          <td>${p.location}</td>
+          <td><button class="remove-btn" onclick="removeProduct(${index})">Remove</button></td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    function removeProduct(index) {
+      let products = JSON.parse(localStorage.getItem('products') || '[]');
+      products.splice(index, 1);
+      localStorage.setItem('products', JSON.stringify(products));
+      loadProducts();
+    }
+
+    function loadExpiringProducts() {
+      const tableBody = document.querySelector('#expiryTable tbody');
+      tableBody.innerHTML = '';
+      const products = JSON.parse(localStorage.getItem('products') || '[]');
+      const today = new Date();
+      const threeMonthsLater = new Date();
+      threeMonthsLater.setMonth(today.getMonth() + 3);
+
+      products.forEach(p => {
+        const expiryDate = new Date(p.expiry);
+        if (expiryDate <= threeMonthsLater && expiryDate >= today) {
+          const row = `<tr>
+            <td>${p.name}</td>
+            <td>${p.mfg}</td>
+            <td>${p.expiry}</td>
+            <td>${p.location}</td>
+          </tr>`;
+          tableBody.innerHTML += row;
+        }
+      });
+    }
+
+    function loadAllProducts() {
+      const tableBody = document.querySelector('#findTable tbody');
+      tableBody.innerHTML = '';
+      const products = JSON.parse(localStorage.getItem('products') || '[]');
+      products.forEach(p => {
+        const row = `<tr>
+          <td>${p.name}</td>
+          <td>${p.mfg}</td>
+          <td>${p.expiry}</td>
+          <td>${p.location}</td>
+        </tr>`;
+        tableBody.innerHTML += row;
+      });
+    }
+
+    function filterProducts() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const rows = document.querySelectorAll('#findTable tbody tr');
+      rows.forEach(row => {
+        const text = row.cells[0].textContent.toLowerCase();
+        if (text.includes(searchTerm) && searchTerm !== '') {
+          row.classList.add('highlight');
+          row.parentElement.prepend(row);
+        } else {
+          row.classList.remove('highlight');
+        }
+      });
+    }
+  </script>
+</body>
+</html>
